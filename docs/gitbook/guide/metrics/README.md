@@ -15,7 +15,7 @@ Check in this example how to enable metrics on a worker:
 ```typescript
 import { Worker, MetricsTime } from 'bullmq';
 
-const myWorker = new Worker('Paint', {
+const myWorker = new Worker('Paint', async job => paintCar(job), {
   connection,
   metrics: {
     maxDataPoints: MetricsTime.ONE_WEEK * 2,
