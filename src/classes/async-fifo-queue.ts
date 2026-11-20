@@ -43,6 +43,9 @@ class LinkedList<T> {
       const head = this.head;
       this.head = this.head.next;
       this.length -= 1;
+      if (!this.length) {
+        this.tail = null;
+      }
 
       return head;
     }
@@ -163,6 +166,8 @@ export class AsyncFifoQueue<T> {
       this.resolve = resolve;
       this.reject = reject;
     });
+    // Prevent unhandledRejection when a queued promise rejects while no fetch() is awaiting
+    this.nextPromise.catch(() => {});
   }
 
   private async wait() {
@@ -178,10 +183,10 @@ export class AsyncFifoQueue<T> {
    * pending or queued items.
    */
   public async fetch(): Promise<T | void> {
-    if (this.pending.size === 0 && this.queue.length === 0) {
-      return;
-    }
     while (this.queue.length === 0) {
+      if (this.pending.size === 0) {
+        return;
+      }
       try {
         await this.wait();
       } catch (err) {

@@ -148,4 +148,37 @@ describe('AsyncFIFOQueue', () => {
 
     expect(results).toEqual(randomDelays.map(() => void 0));
   });
+
+  it('returns undefined from fetch when the last pending promise rejects', async () => {
+    const asyncFifoQueue = new AsyncFifoQueue<number>();
+
+    asyncFifoQueue.add(
+      new Promise<number>((_, reject) => {
+        setTimeout(() => reject(new Error('last failed')), 10);
+      }),
+    );
+
+    const result = await asyncFifoQueue.fetch();
+    expect(result).toEqual(undefined);
+    expect(asyncFifoQueue.numPending()).toEqual(0);
+    expect(asyncFifoQueue.numQueued()).toEqual(0);
+  });
+
+  it('does not trigger unhandledRejection when a promise rejects without an active fetch', async () => {
+    let unhandled: unknown;
+    const onUnhandled = (err: unknown) => {
+      unhandled = err;
+    };
+    process.on('unhandledRejection', onUnhandled);
+
+    try {
+      const asyncFifoQueue = new AsyncFifoQueue<number>();
+      asyncFifoQueue.add(Promise.reject(new Error('rejected before fetch')));
+      await new Promise(resolve => setTimeout(resolve, 20));
+      expect(unhandled).toEqual(undefined);
+      expect(await asyncFifoQueue.fetch()).toEqual(undefined);
+    } finally {
+      process.off('unhandledRejection', onUnhandled);
+    }
+  });
 });
